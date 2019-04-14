@@ -2,6 +2,7 @@
 #
 # This is the utility to install muparser for the PACS examples
 #
+mkdir -p build
 #
 # go in the build directory (remove all old files in that dir if needed)
 cd build/
@@ -22,3 +23,4 @@ make
 make install
 
 # You can remuve the files in the build/ directory now if you want
+rm -r -f build/
