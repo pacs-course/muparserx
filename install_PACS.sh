@@ -23,4 +23,5 @@ make
 make install
 
 # You can remuve the files in the build/ directory now if you want
+cd ..
 rm -r -f build/
