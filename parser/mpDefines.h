@@ -40,13 +40,12 @@
 
 #if defined(_UNICODE)
   #if !defined(_T)
-  #define _T(x) L##x
+    #define _T(x) L##x
   #endif // not defined _T
   #define MUP_STRING_TYPE std::wstring
 #else
   #ifndef _T
-  /** \brief Macro needed for the "unicodification" of strings.
-  */
+  /** \brief Macro needed for the "unicodification" of strings. */
   #define _T(x) x
   #endif
   
@@ -58,7 +57,7 @@
 #endif
 
 /** \brief A macro containing the version of muParserX. */
-#define MUP_PARSER_VERSION _T("4.0.8 (2018-10-09; Dev)")
+#define MUP_PARSER_VERSION _T("4.0.9 (2020-06-19; Dev)")
 
 /** \brief A macro for setting the parser namespace. */
 #define MUP_NAMESPACE_START namespace mup {
