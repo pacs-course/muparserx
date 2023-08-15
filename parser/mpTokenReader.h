@@ -9,8 +9,8 @@
   |  Y Y  \  |  /    |     / __ \|  | \/\___ \\  ___/|  | \/     \ 
   |__|_|  /____/|____|    (____  /__|  /____  >\___  >__| /___/\  \
         \/                     \/           \/     \/           \_/
-                                       Copyright (C) 2016, Ingo Berg
-                                       All rights reserved.
+  Copyright (C) 2023 Ingo Berg, et al.
+  All rights reserved.
 
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
@@ -76,11 +76,11 @@ MUP_NAMESPACE_START
     bool IsBuiltIn(ptr_tok_type &t);
     bool IsEOF(ptr_tok_type &t);
     bool IsNewline(ptr_tok_type &a_Tok);
-    bool IsNewLine(ptr_tok_type &t);
     bool IsInfixOpTok(ptr_tok_type &t);
     bool IsFunTok(ptr_tok_type &t);
     bool IsPostOpTok(ptr_tok_type &t);
     bool IsOprt(ptr_tok_type &t);
+    bool IsShortCutOprt(ptr_tok_type &a_Tok);
     bool IsValTok(ptr_tok_type &t);
     bool IsVarOrConstTok(ptr_tok_type &t);
     bool IsUndefVarTok(ptr_tok_type &t);
@@ -102,6 +102,7 @@ MUP_NAMESPACE_START
 
     mutable fun_maptype  *m_pFunDef;
     mutable oprt_bin_maptype *m_pOprtDef;
+    mutable oprt_bin_shortcut_maptype *m_pOprtShortcutDef;
     mutable oprt_ifx_maptype *m_pInfixOprtDef;
     mutable oprt_pfx_maptype *m_pPostOprtDef;
     mutable val_maptype  *m_pConstDef;

@@ -8,11 +8,7 @@
 	|  Y Y  \  |  /    |     / __ \|  | \/\___ \\  ___/|  | \/     \
 	|__|_|  /____/|____|    (____  /__|  /____  >\___  >__| /___/\  \
 		  \/                     \/           \/     \/           \_/
-	Copyright (C) 2016 Ingo Berg
-	All rights reserved.
-
-	muParserX - A C++ math parser library with array and string support
-	Copyright (c) 2016, Ingo Berg
+	Copyright (C) 2023 Ingo Berg
 	All rights reserved.
 
 	Redistribution and use in source and binary forms, with or without
@@ -67,7 +63,7 @@ public:
 		:IOprtBin(_T("++"), (int)prADD_SUB, oaLEFT)
 	{}
 
-	//-----------------------------------------------------------------------------------------------
+
 	void Eval(ptr_val_type& ret, const ptr_val_type *arg, int argc)
 	{
 		assert(argc == 2);
@@ -76,20 +72,20 @@ public:
 		*ret = a + b;
 	}
 
-	//-----------------------------------------------------------------------------------------------
+
 	const char_type* GetDesc() const
 	{
 		return _T("internally used operator without special meaning for unit testing");
 	}
 
-	//-----------------------------------------------------------------------------------------------
+
 	IToken* Clone() const
 	{
 		return new DbgSillyAdd(*this);
 	}
 };
 
-//------------------------------------------------------------------------------
+
 class FunTest0 : public ICallback
 {
 public:
@@ -112,10 +108,35 @@ public:
 	}
 }; // class FunTest0
 
-//---------------------------------------------------------------------------
+
+class FunReturnFalse : public ICallback
+{
+public:
+	FunReturnFalse() : ICallback(cmFUNC, _T("returnFalse"), 0)
+	{}
+
+	virtual void Eval(ptr_val_type& ret, const ptr_val_type* /*a_pArg*/, int /*a_iArgc*/)
+	{
+		*ret = false;
+	}
+
+	virtual const char_type* GetDesc() const
+	{
+		return _T("");
+	}
+
+	virtual IToken* Clone() const
+	{
+		return new FunReturnFalse(*this);
+	}
+}; // class FunTest0
+
+
+
 int ParserTester::c_iCount = 0;
 
-//---------------------------------------------------------------------------
+
+
 ParserTester::ParserTester()
 	:m_vTestFun()
 	, m_stream(&console())
@@ -178,6 +199,9 @@ int ParserTester::TestIssueReports()
 
 	// Github Issue 63
 	iNumErr += ThrowTest(_T("0<0-0--eye()"), ecINVALID_NUMBER_OF_PARAMETERS);
+
+	// Github Issue 115
+	iNumErr += EqnTest(_T("organisation==\"ACME\""), true, true);
 
 	Assessment(iNumErr);
 	return iNumErr;
@@ -437,6 +461,9 @@ int ParserTester::TestComplex()
 	iNumErr += EqnTest(_T("ca>=10+i"), false, true);
 	iNumErr += EqnTest(_T("ca<=1"), true, true);
 	iNumErr += EqnTest(_T("ca>=1"), true, true);
+
+	// Issue #107 (https://github.com/beltoforion/muparserx/issues/107)
+	iNumErr += EqnTest(_T("cb*=cc"), cmplx_type(-6, 17), true, 2, true);
 
 	// complex numbers
 	iNumErr += EqnTest(_T("i*i"), -1.0, true, 0);
@@ -773,6 +800,9 @@ int ParserTester::TestErrorCodes()
 	iNumErr += ThrowTest(_T("]1"), ecUNEXPECTED_SQR_BRACKET);
 	iNumErr += ThrowTest(_T("va[[3]]"), ecUNEXPECTED_SQR_BRACKET);
 
+	// test for #117
+	iNumErr += ThrowTest(_T("returnFalse()==0"), ecEVAL);
+
 	Assessment(iNumErr);
 	return iNumErr;
 }
@@ -1108,8 +1138,11 @@ int ParserTester::TestBinOp()
 	iNumErr += EqnTest(_T("3--a"), 4.0, true);
 
 	// Problems with small bogus real/imag values introduced due to limited floating point accuracy
-	iNumErr += EqnTest(_T("(-2)^3"), -8.0, true);                   // may introduce incorrect imaginary value (When computed with the log/exp formula: -8 + 2.93e-15i)
+	iNumErr += EqnTest(_T("(-2)^3"), -8.0, true);                 // may introduce incorrect imaginary value (When computed with the log/exp formula: -8 + 2.93e-15i)
 	iNumErr += EqnTest(_T("imag((-2)^3)==0"), true, true);        // may introduce incorrect imaginary value (When computed with the log/exp formula: -8 + 2.93e-15i)
+
+	// issue #112 (https://github.com/beltoforion/muparserx/issues/122)
+	iNumErr += EqnTest(_T("123==\"abc\""), false, true);         // may introduce incorrect imaginary value (When computed with the log/exp formula: -8 + 2.93e-15i)
 
 	Assessment(iNumErr);
 	return iNumErr;
@@ -1132,9 +1165,9 @@ int ParserTester::TestIfElse()
 	//  test case copied from muparser (https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=23410)
 	// with variations
 	iNumErr += ThrowTest(_T(R"(false ? 4 : "", ? 4 : "", ? 4 : "")"), ecUNEXPECTED_COMMA);
-	iNumErr += EqnTest(_T(R"(false ? "four" : 4)"), 4, true);
-	iNumErr += EqnTest(_T(R"(true ? "four" : 4)"), "four", true);
-	iNumErr += EqnTest(_T(R"(true ? "foo" : "bar")"), "foo", true);
+	iNumErr += EqnTest(_T(R"(false ? "four" : 4)"), (int_type)4, true);
+	iNumErr += EqnTest(_T(R"(true ? "four" : 4)"), _T("four"), true);
+	iNumErr += EqnTest(_T(R"(true ? "foo" : "bar")"), _T("foo"), true);
 
 	// test case and variations copied from muparser https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22938
 	iNumErr += ThrowTest(_T("sum(false?1,0,0:3)"), ecUNEXPECTED_COMMA);
@@ -1277,8 +1310,11 @@ int ParserTester::TestEqn()
 	// test case copied from muparser: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=23330#c1
 	iNumErr += ThrowTest(_T("6, +, +, +, +, +, +, +, +, +, +, +, +, +, +, 1, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +, +"), ecUNEXPECTED_COMMA);
 
-	iNumErr += ThrowTest(_T("1e1234"), ecUNASSIGNABLE_TOKEN);
-	iNumErr += ThrowTest(_T("-1e1234"), ecUNASSIGNABLE_TOKEN);
+//	iNumErr += ThrowTest(_T("1e1234"), ecUNASSIGNABLE_TOKEN);
+//	iNumErr += ThrowTest(_T("-1e1234"), ecUNASSIGNABLE_TOKEN);
+;
+	iNumErr += EqnTest(_T("1e1234"), std::numeric_limits<float_type>::infinity(), true);
+	iNumErr += EqnTest(_T("-1e1234"), -std::numeric_limits<float_type>::infinity(), true);
 
 	iNumErr += EqnTest(_T("-2--8"), (float_type)6.0, true);
 	iNumErr += EqnTest(_T("2*(a=9)*3"), 54., true);
@@ -1483,6 +1519,9 @@ int ParserTester::ThrowTest(const string_type &a_sExpr, int a_nErrc, int a_nPos,
 		p.DefineVar(_T("c"), Variable(&vVarVal[2]));
 		p.DefineVar(_T("d"), Variable(&vVarVal[3]));
 
+		// Add functions
+		p.DefineFun(new FunReturnFalse);
+
 		// array variables
 		Value aVal1(3, 0);
 		aVal1.At(0) = (float_type)1.0;
@@ -1566,7 +1605,7 @@ int ParserTester::ThrowTest(const string_type &a_sExpr, int a_nErrc, int a_nPos,
 }
 
 //---------------------------------------------------------------------------
-int ParserTester::EqnTest(const string_type &a_str, Value a_val, bool a_fPass, int nExprVar)
+int ParserTester::EqnTest(const string_type &a_str, Value a_val, bool a_fPass, int nExprVar, bool evaluateOnce)
 {
 	ParserTester::c_iCount++;
 	int iRet(1);
@@ -1580,7 +1619,7 @@ int ParserTester::EqnTest(const string_type &a_str, Value a_val, bool a_fPass, i
 		std::unique_ptr<ParserX> p1(new ParserX());
 
 		// Add variables
-		Value vVarVal[] = { 1., 2., 3., -2., -1. };
+		Value vVarVal[] = { 1., 2., 3., -2., -1.};
 
 		// m1 ist die Einheitsmatrix
 		Value m1(3, 3, 0);
@@ -1596,6 +1635,7 @@ int ParserTester::EqnTest(const string_type &a_str, Value a_val, bool a_fPass, i
 
 		p1->DefineOprt(new DbgSillyAdd);
 		p1->DefineFun(new FunTest0);
+		p1->DefineFun(new FunReturnFalse);
 
 		p1->DefineVar(_T("a"), Variable(&vVarVal[0]));
 		p1->DefineVar(_T("b"), Variable(&vVarVal[1]));
@@ -1609,6 +1649,7 @@ int ParserTester::EqnTest(const string_type &a_str, Value a_val, bool a_fPass, i
 		p1->DefineConst(_T("const"), 1.);
 		p1->DefineConst(_T("const1"), 2.);
 		p1->DefineConst(_T("const2"), 3.);
+		p1->DefineConst(_T("organisation"), _T("ACME")); // #115
 
 		// some vector variables
 		Value aVal1(3, 0);
@@ -1636,44 +1677,55 @@ int ParserTester::EqnTest(const string_type &a_str, Value a_val, bool a_fPass, i
 
 		fVal[0] = p1->Eval();
 
-		// Test copy and assignement operators
-		std::vector<ParserX> vParser;
-		vParser.push_back(*p1);   // Push p1 into the vector
-		ParserX p2 = vParser[0];   // take parser from vector
-
-		// destroy the originals from p2
-		vParser.clear();              // delete the vector
-		p1.reset(0);                  // delete the original
-
-		fVal[1] = p2.Eval();          // If copy constructions does not work
-		// we may see a crash here
-
-		// Test assignement operator
-		// additionally  disable Optimizer this time
-		ParserX p3;
-		p3 = p2;
-		fVal[2] = p3.Eval();          // If assignment does not work
-		// we may see a crash here
-
-		// Calculating a second time will parse from rpn rather than from
-		// string. The result must be the same...
-		fVal[3] = p3.Eval();
-
-		// Calculate yet another time. There is the possibility of
-		// changing variables as a side effect of expression
-		// evaluation. So there are really bugs that could make this fail...
-		fVal[4] = p3.Eval();
-
-		// Check i number of used variables is correct
-		if (nExprVar != -1)
+		if (evaluateOnce)
 		{
-			std::size_t n2 = p2.GetExprVar().size();
-			std::size_t n3 = p3.GetExprVar().size();
+			// Equations with assignments will have differen results each time
+			fVal[1] = fVal[0];
+			fVal[2] = fVal[0];
+			fVal[3] = fVal[0];
+			fVal[4] = fVal[0];
+		}
+		else
+		{
+			// Test copy and assignement operators
+			std::vector<ParserX> vParser;
+			vParser.push_back(*p1);   // Push p1 into the vector
+			ParserX p2 = vParser[0];   // take parser from vector
 
-			if (n2 + n3 != 2 * n2 || int(n2) != nExprVar)
+			// destroy the originals from p2
+			vParser.clear();              // delete the vector
+			p1.reset(0);                  // delete the original
+
+			fVal[1] = p2.Eval();          // If copy constructions does not work
+			// we may see a crash here
+
+			// Test assignement operator
+			// additionally  disable Optimizer this time
+			ParserX p3;
+			p3 = p2;
+			fVal[2] = p3.Eval();          // If assignment does not work
+			// we may see a crash here
+
+			// Calculating a second time will parse from rpn rather than from
+			// string. The result must be the same...
+			fVal[3] = p3.Eval();
+
+			// Calculate yet another time. There is the possibility of
+			// changing variables as a side effect of expression
+			// evaluation. So there are really bugs that could make this fail...
+			fVal[4] = p3.Eval();
+
+			// Check i number of used variables is correct
+			if (nExprVar != -1)
 			{
-				*m_stream << _T("  Number of expression variables is incorrect. (expected: ")
-					<< nExprVar << _T("; detected: ") << n2 << _T(")");
+				std::size_t n2 = p2.GetExprVar().size();
+				std::size_t n3 = p3.GetExprVar().size();
+
+				if (n2 + n3 != 2 * n2 || int(n2) != nExprVar)
+				{
+					*m_stream << _T("  Number of expression variables is incorrect. (expected: ")
+						<< nExprVar << _T("; detected: ") << n2 << _T(")");
+				}
 			}
 		}
 
